@@ -169,7 +169,7 @@
 
   var siteConfigPromise = loadSiteConfig();
 
-  function initAmountPage() {
+  function initAmountPage(openSamePage) {
     var optionButtons = Array.prototype.slice.call(document.querySelectorAll('.amount-option'));
     var continueButton = document.getElementById('amount-continue');
     var message = document.getElementById('selection-message');
@@ -205,6 +205,7 @@
 
     continueButton.addEventListener('click', function () {
       if (!VALID_AMOUNTS.includes(selectedAmount)) return;
+      if (openSamePage) return openSamePage(selectedAmount);
       var params = getTrackingParams();
       params.set('amount', selectedAmount);
       params.set('v', '2026072703');
@@ -229,7 +230,8 @@
     var isOnePageE = (IS_E_VARIANT || IS_G_VARIANT) && !!document.querySelector('.one-page-flow');
     var cAmountOptions = LANDING_VARIANT === 'C' ? document.getElementById('c-amount-options') : null;
     var isInlineC = !!cAmountOptions;
-    var cAmountSubmitting = false;
+    var locksSamePageSubmit = isInlineC || !!calculatorBand;
+    var samePageSubmitting = false;
     var inlineAmountButtons = isOnePageE
       ? Array.prototype.slice.call(document.querySelectorAll('.amount-option'))
       : isInlineC ? Array.prototype.slice.call(cAmountOptions.querySelectorAll('button[data-amount]')) : [];
@@ -313,17 +315,20 @@
         if (selectedAmount && formStatus && formStatus.textContent === '請先選擇需求金額。') formStatus.textContent = '';
       }
       if (isInlineC) {
-        var isBlocked = Array.prototype.some.call(warningInputs, function (input) {
-          return input.checked && input.value === '警示戶';
-        });
-        submitButton.disabled = cAmountSubmitting || isBlocked || !VALID_AMOUNTS.includes(selectedAmount);
+        submitButton.disabled = samePageSubmitting || hasWarningAccount() || !VALID_AMOUNTS.includes(selectedAmount);
         if (selectedAmount && formStatus && formStatus.textContent === '請先選擇需求金額。') formStatus.textContent = '';
       }
     }
 
+    function hasWarningAccount() {
+      return Array.prototype.some.call(warningInputs, function (input) {
+        return input.checked && input.value === '警示戶';
+      });
+    }
+
     inlineAmountButtons.forEach(function (button) {
       button.addEventListener('click', function () {
-        if (isInlineC && cAmountSubmitting) return;
+        if (isInlineC && samePageSubmitting) return;
         selectedAmount = button.getAttribute('data-amount') || '';
         safeSessionSet(STORAGE_KEY, selectedAmount);
         renderInlineAmount();
@@ -334,7 +339,7 @@
 
     var backParams = getTrackingParams();
     var backUrl = 'index.html' + (backParams.toString() ? '?' + backParams.toString() : '');
-    editLinks.forEach(function (link) { if (link) link.href = backUrl; });
+    if (!calculatorBand) editLinks.forEach(function (link) { if (link) link.href = backUrl; });
 
     ageInput.addEventListener('input', function () {
       ageInput.value = ageInput.value.replace(/\D/g, '').slice(0, 3);
@@ -349,7 +354,7 @@
         warningHelp.classList.toggle('is-rejected', isWarningAccount);
         submitButton.disabled = isOnePageE
           ? (isWarningAccount || !isOnePageReady())
-          : (cAmountSubmitting || isWarningAccount || !VALID_AMOUNTS.includes(selectedAmount));
+          : (samePageSubmitting || isWarningAccount || !VALID_AMOUNTS.includes(selectedAmount));
         if (isWarningAccount) {
           showFieldError('warning_account', '警示戶或告誡戶目前無法辦理。');
         } else {
@@ -600,8 +605,8 @@
       if (!values) return;
 
       submitButton.disabled = true;
-      if (isInlineC) {
-        cAmountSubmitting = true;
+      if (locksSamePageSubmit) {
+        samePageSubmitting = true;
         inlineAmountButtons.forEach(function (button) { button.disabled = true; });
       }
       submitButton.textContent = '資料送出中，請稍候';
@@ -656,10 +661,11 @@
       } catch (error) {
         console.warn('Lead submission failed', error);
         formStatus.textContent = '資料暫時無法送出，請稍後再試。你已填寫的內容仍保留在頁面中。';
-        if (isInlineC) {
-          cAmountSubmitting = false;
+        if (locksSamePageSubmit) {
+          samePageSubmitting = false;
           inlineAmountButtons.forEach(function (button) { button.disabled = false; });
-          renderInlineAmount();
+          if (isInlineC) renderInlineAmount();
+          else submitButton.disabled = hasWarningAccount();
         } else {
           submitButton.disabled = false;
         }
@@ -668,14 +674,19 @@
     });
     return {
       syncCalculatorBand: function (band) {
-        if (!cAmountSubmitting && VALID_AMOUNTS.includes(band)) {
+        if (!samePageSubmitting && VALID_AMOUNTS.includes(band)) {
           selectedAmount = band;
           safeSessionSet(STORAGE_KEY, band);
           renderInlineAmount();
         }
       },
-      isSubmitting: function () { return cAmountSubmitting && successPanel.hidden; }
+      isSubmitting: function () { return samePageSubmitting && successPanel.hidden; }
     };
+  }
+
+  function trackSamePageView() {
+    // A same-document switch replaces the prior page load, including its PageView.
+    siteConfigPromise.then(function () { trackFbEvent('PageView'); });
   }
 
   function initSamePageC() {
@@ -699,8 +710,7 @@
       shell.classList.toggle('copper-c-form', open);
       (open ? formTitle : applyButton).focus({preventScroll: true});
       window.scrollTo(0, 0);
-      // A same-document switch replaces the prior page load, including its PageView.
-      siteConfigPromise.then(function () { trackFbEvent('PageView'); });
+      trackSamePageView();
     }
 
     applyButton.addEventListener('c:open-application', function (event) {
@@ -720,8 +730,43 @@
     });
   }
 
+  function initSamePageF() {
+    var estimate = document.getElementById('f-estimate');
+    var estimateFooter = document.getElementById('f-estimate-footer');
+    var applyView = document.getElementById('f-application');
+    var applyFooter = document.getElementById('f-application-footer');
+    var continueButton = document.getElementById('amount-continue');
+    var formTitle = document.getElementById('form-title');
+    var successPanel = document.getElementById('success-panel');
+    var controller;
+
+    function switchView(open) {
+      estimate.hidden = estimateFooter.hidden = open;
+      applyView.hidden = applyFooter.hidden = !open;
+      (open ? formTitle : continueButton).focus({preventScroll: true});
+      window.scrollTo(0, 0);
+      trackSamePageView();
+    }
+
+    initAmountPage(function (band) {
+      if (!applyView.hidden) return;
+      if (!controller) controller = initApplyPage(band);
+      else controller.syncCalculatorBand(band);
+      switchView(true);
+    });
+    ['f-home-link', 'edit-amount-link', 'change-amount-link'].forEach(function (id) {
+      document.getElementById(id).addEventListener('click', function (event) {
+        event.preventDefault();
+        if (!controller || applyView.hidden || controller.isSubmitting()) return;
+        if (!successPanel.hidden) return window.location.reload();
+        switchView(false);
+      });
+    });
+  }
+
   var page = document.body.getAttribute('data-page');
   if (page === 'amount') initAmountPage();
   if (page === 'apply') initApplyPage();
   if (page === 'c-same-page' && LANDING_VARIANT === 'C') initSamePageC();
+  if (page === 'f-same-page' && LANDING_VARIANT === 'F') initSamePageF();
 })();
