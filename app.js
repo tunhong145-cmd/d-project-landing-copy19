@@ -228,7 +228,8 @@
       leadSourceUrl = source.href;
     }
     var isOnePageE = (IS_E_VARIANT || IS_G_VARIANT) && !!document.querySelector('.one-page-flow');
-    var cAmountOptions = LANDING_VARIANT === 'C' ? document.getElementById('c-amount-options') : null;
+    var cAmountOptions = (LANDING_VARIANT === 'C' || isChampagneF)
+      ? document.getElementById('c-amount-options') : null;
     var isInlineC = !!cAmountOptions;
     var locksSamePageSubmit = isInlineC || !!calculatorBand;
     var samePageSubmitting = false;
@@ -689,7 +690,7 @@
     siteConfigPromise.then(function () { trackFbEvent('PageView'); });
   }
 
-  function initSamePageC() {
+  function initCalculatorApplication() {
     var shell = document.getElementById('c-same-page');
     var header = document.getElementById('c-estimate-header');
     var calculator = document.getElementById('calculator');
@@ -765,8 +766,9 @@
   }
 
   var page = document.body.getAttribute('data-page');
+  var isChampagneF = page === 'f-champagne' && LANDING_VARIANT === 'F';
   if (page === 'amount') initAmountPage();
   if (page === 'apply') initApplyPage();
-  if (page === 'c-same-page' && LANDING_VARIANT === 'C') initSamePageC();
+  if ((page === 'c-same-page' && LANDING_VARIANT === 'C') || isChampagneF) initCalculatorApplication();
   if (page === 'f-same-page' && LANDING_VARIANT === 'F') initSamePageF();
 })();

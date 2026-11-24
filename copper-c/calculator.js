@@ -14,8 +14,11 @@
   var trackingKeys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','source','fbclid','ttclid',
     'campaign_id','adset_id','ad_id','ad_name','placement','site_source_name'];
   var incoming = new URLSearchParams(location.search);
-  var legacyKey = 'd_project_c_selected_amount';
-  var preciseKey = 'd_project_c_copper_calc_amount';
+  var page = document.body.getAttribute('data-page');
+  var isChampagneF = page === 'f-champagne';
+  var variantStorage = isChampagneF ? 'd_project_f_' : 'd_project_c_';
+  var legacyKey = variantStorage + 'selected_amount';
+  var preciseKey = variantStorage + 'copper_calc_amount';
 
   function load(key) {
     try { return sessionStorage.getItem(key) || ''; } catch (_) { return ''; }
@@ -71,10 +74,11 @@
     var principal = Number(amount.value);
     var band = bandFor(principal);
     save(preciseKey,amount.value);
-    if (document.body.getAttribute('data-page') === 'c-same-page' &&
+    if ((page === 'c-same-page' || isChampagneF) &&
         !applyButton.dispatchEvent(new CustomEvent('c:open-application', {
           cancelable:true,detail:{band:band.value,amount:principal}
         }))) return;
+    if (isChampagneF) return;
     save(legacyKey,band.value);
     var target = new URL('apply.html',location.href);
     trackingKeys.forEach(function (key) {
