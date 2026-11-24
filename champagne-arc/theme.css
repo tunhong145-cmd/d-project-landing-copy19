@@ -247,6 +247,20 @@ body {
 .champagne-arc #calculator .apply-dock .notice-amount { background: var(--optical-tint); color: var(--optical-accent); }
 
 /* Form and success use the same light surfaces. LINE keeps its green CTA. */
+.champagne-arc .form-amount.inline-amount { display: grid; gap: 8px; padding: 10px 11px 11px; }
+.champagne-arc .inline-amount .inline-amount-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.champagne-arc .inline-amount .inline-amount-heading > span { margin: 0; color: var(--optical-ink); font-size: 14px; font-weight: 750; }
+.champagne-arc .inline-amount .inline-amount-heading > strong { font-size: 16px; text-align: end; }
+.champagne-arc .inline-amount .bands { padding: 0; gap: 6px; }
+.champagne-arc .inline-amount .bands button { min-height: 44px; padding: 4px; font-size: 14px; }
+.champagne-arc .inline-amount .bands button.selected {
+  background: var(--champagne-metal);
+  border-color: #ae8340;
+  color: var(--champagne-metal-ink);
+  box-shadow: inset 0 1px 0 #fff3c9, 0 1px 2px var(--champagne-shadow);
+  font-weight: 850;
+}
+.champagne-arc .inline-amount .bands button:disabled { cursor: default; opacity: .7; }
 .champagne-arc .primary {
   min-height: 52px;
   padding: 9px 12px;

@@ -12,9 +12,9 @@
   <link rel="stylesheet" href="copper-c/ice.css?v=20261119-1">
   <link rel="stylesheet" href="copper-c/optical-blue.css?v=20261119-1">
   <link rel="stylesheet" href="copper-c/form.css?v=20261119-1">
-  <link rel="stylesheet" href="champagne-arc/theme.css?v=20261124-1">
+  <link rel="stylesheet" href="champagne-arc/theme.css?v=20261124-2">
   <script src="repo-pixels.js?v=20261010-1"></script>
-  <script src="app.js?v=20261111-warning-label" defer></script>
+  <script src="app.js?v=20261124-c-form-amount" defer></script>
 </head>
 <body data-page="apply">
 <main class="app champagne-arc copper-c-form">
@@ -33,9 +33,17 @@
         <p>請填寫本人真實資料，方便專員接續確認。</p>
       </div>
       <form id="lead-form" class="application-workspace" novalidate>
-        <div class="amount-editor form-amount" aria-label="已選擇的需求金額">
-          <div><span>需求金額</span><strong id="selected-amount">尚未選擇</strong></div>
-          <a class="edit-amount" id="change-amount-link" href="index.html">修改 <b aria-hidden="true">›</b></a>
+        <div class="amount-editor form-amount inline-amount">
+          <div class="inline-amount-heading">
+            <span id="c-amount-label">需求金額</span>
+            <strong id="selected-amount" aria-live="polite">尚未選擇</strong>
+          </div>
+          <div class="bands" id="c-amount-options" role="group" aria-labelledby="c-amount-label">
+            <button type="button" data-amount="10萬-20萬" aria-pressed="false">10萬–20萬</button>
+            <button type="button" data-amount="20萬-30萬" aria-pressed="false">20萬–30萬</button>
+            <button type="button" data-amount="30萬-50萬" aria-pressed="false">30萬–50萬</button>
+            <button type="button" data-amount="50萬-100萬" aria-pressed="false">50萬–100萬</button>
+          </div>
         </div>
         <div class="identity-fields">
           <label class="field" for="name">姓名

@@ -220,7 +220,13 @@
     var params = new URLSearchParams(window.location.search);
     var selectedAmount = params.get('amount') || safeSessionGet(STORAGE_KEY);
     var isOnePageE = (IS_E_VARIANT || IS_G_VARIANT) && !!document.querySelector('.one-page-flow');
-    var inlineAmountButtons = isOnePageE ? Array.prototype.slice.call(document.querySelectorAll('.amount-option')) : [];
+    var cAmountOptions = LANDING_VARIANT === 'C' ? document.getElementById('c-amount-options') : null;
+    var isInlineC = !!cAmountOptions;
+    var cAmountSubmitting = false;
+    var inlineAmountButtons = isOnePageE
+      ? Array.prototype.slice.call(document.querySelectorAll('.amount-option'))
+      : isInlineC ? Array.prototype.slice.call(cAmountOptions.querySelectorAll('button[data-amount]')) : [];
+    if (isInlineC && !VALID_AMOUNTS.includes(selectedAmount)) selectedAmount = '';
     var amountDisplay = document.getElementById('selected-amount');
     var successAmount = document.getElementById('success-amount');
     var form = document.getElementById('lead-form');
@@ -299,10 +305,18 @@
         submitButton.disabled = !VALID_AMOUNTS.includes(selectedAmount);
         if (selectedAmount && formStatus && formStatus.textContent === '請先選擇需求金額。') formStatus.textContent = '';
       }
+      if (isInlineC) {
+        var isBlocked = Array.prototype.some.call(warningInputs, function (input) {
+          return input.checked && input.value === '警示戶';
+        });
+        submitButton.disabled = cAmountSubmitting || isBlocked || !VALID_AMOUNTS.includes(selectedAmount);
+        if (selectedAmount && formStatus && formStatus.textContent === '請先選擇需求金額。') formStatus.textContent = '';
+      }
     }
 
     inlineAmountButtons.forEach(function (button) {
       button.addEventListener('click', function () {
+        if (isInlineC && cAmountSubmitting) return;
         selectedAmount = button.getAttribute('data-amount') || '';
         safeSessionSet(STORAGE_KEY, selectedAmount);
         renderInlineAmount();
@@ -328,7 +342,7 @@
         warningHelp.classList.toggle('is-rejected', isWarningAccount);
         submitButton.disabled = isOnePageE
           ? (isWarningAccount || !isOnePageReady())
-          : (isWarningAccount || !VALID_AMOUNTS.includes(selectedAmount));
+          : (cAmountSubmitting || isWarningAccount || !VALID_AMOUNTS.includes(selectedAmount));
         if (isWarningAccount) {
           showFieldError('warning_account', '警示戶或告誡戶目前無法辦理。');
         } else {
@@ -356,16 +370,16 @@
     }
 
     if (!VALID_AMOUNTS.includes(selectedAmount)) {
-      if (amountDisplay) amountDisplay.textContent = isOnePageE ? '尚未選擇' : '請重新選擇';
+      if (amountDisplay) amountDisplay.textContent = (isOnePageE || isInlineC) ? '尚未選擇' : '請重新選擇';
       submitButton.disabled = true;
-      if (formStatus) formStatus.textContent = isOnePageE ? '' : '尚未選擇需求金額，請返回上一頁選擇。';
+      if (formStatus) formStatus.textContent = (isOnePageE || isInlineC) ? '' : '尚未選擇需求金額，請返回上一頁選擇。';
     } else {
       safeSessionSet(STORAGE_KEY, selectedAmount);
       if (amountDisplay) amountDisplay.textContent = selectedAmount;
       if (successAmount) successAmount.textContent = selectedAmount;
     }
+    if (isOnePageE || isInlineC) renderInlineAmount();
     if (isOnePageE) {
-      renderInlineAmount();
       syncOnePageButton();
       renderQualificationState();
     }
@@ -419,7 +433,7 @@
         formStatus.textContent = '本服務目前不受理警示戶或告誡戶，資料不會送出。';
         valid = false;
       }
-      if (!VALID_AMOUNTS.includes(selectedAmount)) { formStatus.textContent = isOnePageE ? '請先選擇需求金額。' : '請先返回上一頁選擇需求金額。'; valid = false; }
+      if (!VALID_AMOUNTS.includes(selectedAmount)) { formStatus.textContent = (isOnePageE || isInlineC) ? '請先選擇需求金額。' : '請先返回上一頁選擇需求金額。'; valid = false; }
 
       return valid ? values : null;
     }
@@ -579,6 +593,10 @@
       if (!values) return;
 
       submitButton.disabled = true;
+      if (isInlineC) {
+        cAmountSubmitting = true;
+        inlineAmountButtons.forEach(function (button) { button.disabled = true; });
+      }
       submitButton.textContent = '資料送出中，請稍候';
       formStatus.textContent = '';
 
@@ -631,7 +649,13 @@
       } catch (error) {
         console.warn('Lead submission failed', error);
         formStatus.textContent = '資料暫時無法送出，請稍後再試。你已填寫的內容仍保留在頁面中。';
-        submitButton.disabled = false;
+        if (isInlineC) {
+          cAmountSubmitting = false;
+          inlineAmountButtons.forEach(function (button) { button.disabled = false; });
+          renderInlineAmount();
+        } else {
+          submitButton.disabled = false;
+        }
         submitButton.textContent = '重新送出資料';
       }
     });
