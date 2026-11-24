@@ -66,9 +66,15 @@
       });
     });
   });
-  document.getElementById('apply').addEventListener('click',function () {
-    var band = bandFor(Number(amount.value));
+  var applyButton = document.getElementById('apply');
+  applyButton.addEventListener('click',function () {
+    var principal = Number(amount.value);
+    var band = bandFor(principal);
     save(preciseKey,amount.value);
+    if (document.body.getAttribute('data-page') === 'c-same-page' &&
+        !applyButton.dispatchEvent(new CustomEvent('c:open-application', {
+          cancelable:true,detail:{band:band.value,amount:principal}
+        }))) return;
     save(legacyKey,band.value);
     var target = new URL('apply.html',location.href);
     trackingKeys.forEach(function (key) {

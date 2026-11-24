@@ -216,9 +216,16 @@
     renderSelection();
   }
 
-  function initApplyPage() {
+  function initApplyPage(calculatorBand) {
     var params = new URLSearchParams(window.location.search);
-    var selectedAmount = params.get('amount') || safeSessionGet(STORAGE_KEY);
+    var selectedAmount = calculatorBand || params.get('amount') || safeSessionGet(STORAGE_KEY);
+    var leadSourceUrl = window.location.href;
+    if (calculatorBand) {
+      var source = new URL(leadSourceUrl);
+      source.search = getTrackingParams().toString();
+      source.hash = '';
+      leadSourceUrl = source.href;
+    }
     var isOnePageE = (IS_E_VARIANT || IS_G_VARIANT) && !!document.querySelector('.one-page-flow');
     var cAmountOptions = LANDING_VARIANT === 'C' ? document.getElementById('c-amount-options') : null;
     var isInlineC = !!cAmountOptions;
@@ -613,7 +620,7 @@
         q2_bank_status: values.warningAccount,
         q3_amount_needed: selectedAmount,
         q4_foreign_currency_account: '',
-        source_url: window.location.href,
+        source_url: leadSourceUrl,
         traffic_source: getTrafficSource() || null,
         user_agent: navigator.userAgent,
         ip_address: clientMetadata.ip_address,
@@ -659,9 +666,62 @@
         submitButton.textContent = '重新送出資料';
       }
     });
+    return {
+      syncCalculatorBand: function (band) {
+        if (!cAmountSubmitting && VALID_AMOUNTS.includes(band)) {
+          selectedAmount = band;
+          safeSessionSet(STORAGE_KEY, band);
+          renderInlineAmount();
+        }
+      },
+      isSubmitting: function () { return cAmountSubmitting && successPanel.hidden; }
+    };
+  }
+
+  function initSamePageC() {
+    var shell = document.getElementById('c-same-page');
+    var header = document.getElementById('c-estimate-header');
+    var calculator = document.getElementById('calculator');
+    var applyButton = document.getElementById('apply');
+    var applyView = document.getElementById('c-application');
+    var application = document.getElementById('application');
+    var formTitle = document.getElementById('form-title');
+    var successPanel = document.getElementById('success-panel');
+    var returnButton = document.getElementById('c-return-to-estimate');
+    var controller;
+    var lastCalculatorAmount;
+
+    function showForm(open) {
+      header.hidden = open;
+      calculator.hidden = open;
+      applyView.hidden = !open;
+      application.hidden = !open;
+      shell.classList.toggle('copper-c-form', open);
+      (open ? formTitle : applyButton).focus({preventScroll: true});
+      window.scrollTo(0, 0);
+      // A same-document switch replaces the prior page load, including its PageView.
+      siteConfigPromise.then(function () { trackFbEvent('PageView'); });
+    }
+
+    applyButton.addEventListener('c:open-application', function (event) {
+      var selection = event.detail;
+      if (!selection || !VALID_AMOUNTS.includes(selection.band)) return;
+      event.preventDefault();
+      if (!applyView.hidden) return;
+      if (!controller) controller = initApplyPage(selection.band);
+      else if (selection.amount !== lastCalculatorAmount) controller.syncCalculatorBand(selection.band);
+      lastCalculatorAmount = selection.amount;
+      showForm(true);
+    });
+    returnButton.addEventListener('click', function () {
+      if (!controller || controller.isSubmitting()) return;
+      if (!successPanel.hidden) return window.location.reload();
+      showForm(false);
+    });
   }
 
   var page = document.body.getAttribute('data-page');
   if (page === 'amount') initAmountPage();
   if (page === 'apply') initApplyPage();
+  if (page === 'c-same-page' && LANDING_VARIANT === 'C') initSamePageC();
 })();
