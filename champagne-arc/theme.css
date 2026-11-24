@@ -247,12 +247,37 @@ body {
 .champagne-arc #calculator .apply-dock .notice-amount { background: var(--optical-tint); color: var(--optical-accent); }
 
 /* Form and success use the same light surfaces. LINE keeps its green CTA. */
-.champagne-arc .form-amount.inline-amount { display: grid; gap: 8px; padding: 10px 11px 11px; }
-.champagne-arc .inline-amount .inline-amount-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.champagne-arc .form-amount.inline-amount {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  align-items: stretch;
+  gap: 9px;
+  padding: 11px;
+  border-radius: 14px;
+  background: linear-gradient(152deg, var(--optical-paper), var(--optical-shell));
+}
+.champagne-arc .inline-amount .inline-amount-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-inline: 2px; }
 .champagne-arc .inline-amount .inline-amount-heading > span { margin: 0; color: var(--optical-ink); font-size: 14px; font-weight: 750; }
-.champagne-arc .inline-amount .inline-amount-heading > strong { font-size: 16px; text-align: end; }
-.champagne-arc .inline-amount .bands { padding: 0; gap: 6px; }
-.champagne-arc .inline-amount .bands button { min-height: 44px; padding: 4px; font-size: 14px; }
+.champagne-arc .inline-amount .inline-amount-heading > strong {
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: var(--optical-tint);
+  font-size: 13px;
+  line-height: 1.25;
+  text-align: end;
+  white-space: nowrap;
+}
+.champagne-arc .inline-amount .bands { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0; gap: 7px; }
+.champagne-arc .inline-amount .bands button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 5px 4px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
 .champagne-arc .inline-amount .bands button.selected {
   background: var(--champagne-metal);
   border-color: #ae8340;
